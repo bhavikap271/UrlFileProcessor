@@ -1,4 +1,4 @@
-package ebay.main.java;
+package main.java.com.ebay.urlProcessor;
 
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -11,38 +11,35 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class FileProcessor {
-	List<Path> files = new ArrayList<Path>();
-	List<Path> filePaths = null;
-	int noOfWorkers = 0;
 
-	public FileProcessor(List<Path> allPaths, int noOfThreads) {
-		this.filePaths = allPaths;
-		this.noOfWorkers = noOfThreads;	
+	private final static Logger logger = Logger.getLogger(FileProcessor.class.getName());
+	Path directoryPath = null;
+
+	public FileProcessor(Path path) {
+		this.directoryPath = path;
 	}
 
-	public Map<String,Integer> processAllPaths() throws Exception{		
-		for(Path path: filePaths){		
-			boolean success = getAllFiles(path); 		  
-			if(!success){			
-				throw new Exception("Error creating file list for path: "+ path); 
-			}			
-		}	
-		return processFiles();		
+	public Map<String,Integer> processFiles() throws Exception {
+		List<Path> files = getAllFiles(this.directoryPath); 		 		
+		return processUrlsInAllFiles(files);		
 	}
 
 	/**
-	 * Creates a list of files to be processed from all directories/path
-	 * @param path
-	 * @return
+	 * Method : getAllFiles()
+	 * Creates a list of files to be processed from directory.
+	 * @param path : directory path
+	 * @return true : if files successfully read, false otherwise.
+	 * @throws Exception 
 	 */
-	public boolean getAllFiles(Path path){
-		boolean success = true;		
+	public List<Path> getAllFiles(Path path) throws Exception{
+		List<Path> files = new ArrayList<Path>();
 		try {
 			Files.walkFileTree(path, new SimpleFileVisitor<Path>(){
 				public FileVisitResult visitFile(Path path, BasicFileAttributes attrs){	
@@ -53,21 +50,17 @@ public class FileProcessor {
 					return FileVisitResult.CONTINUE;
 				}	
 			});
-
+			return files;
 		}catch (IOException e) {		
-			System.out.println(e.getMessage());
-			e.printStackTrace();
-			success = false;
+			String message = String.format("Error reading files from directory: %s", this.directoryPath);
+			logger.log(Level.SEVERE, message);
+			throw new Exception(message); 
 		}		
-		return success;		
 	}
 
-	/**
-	 *  Creates threads for processing all files and returns the count of top N words
-	 * @return
-	 */
-	public Map<String, Integer> processFiles() {	
-		ExecutorService executorService = Executors.newFixedThreadPool(noOfWorkers);
+	public Map<String, Integer> processUrlsInAllFiles(List<Path> files) throws Exception {	
+		int cores = Runtime.getRuntime().availableProcessors();
+		ExecutorService executorService = Executors.newFixedThreadPool(cores);
 		List<Callable<Map<UrlStatus,Integer>>> tasks = new ArrayList<Callable<Map<UrlStatus,Integer>>>();
 		// create tasks
 		for (Path path : files) {
@@ -79,21 +72,22 @@ public class FileProcessor {
 			for (Future<Map<UrlStatus,Integer>> future : futures) {
 				Map<UrlStatus, Integer> entries = future.get();
 				for (Map.Entry<UrlStatus , Integer> entry : entries.entrySet()) {
-					if (finalCountMap.containsKey(entry.getKey())){
-						Integer value = finalCountMap.get(entry.getKey());
+					if (finalCountMap.containsKey(entry.getKey().toString())){
+						Integer value = finalCountMap.get(entry.getKey().toString());
 						finalCountMap.put(entry.getKey().toString(), value + entry.getValue());
 					}
 					else {
 						finalCountMap.put(entry.getKey().toString(), entry.getValue());
 					}
 				}
-			}			
-			executorService.shutdown();	
-		} catch(InterruptedException e) {		
-			e.printStackTrace();		
-		} catch (ExecutionException e) {			
-			e.printStackTrace();
+			}
+			return finalCountMap;
+		} catch (Exception e) {	
+			String message = String.format("Error processing urls.Cause: %s", e.getCause());
+			logger.log(Level.SEVERE, message);
+			throw new Exception(message); 
+		} finally {
+		   executorService.shutdown();	
 		}
-		return finalCountMap;
 	}
 }
