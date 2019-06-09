@@ -58,6 +58,12 @@ public class FileProcessor {
 		}		
 	}
 
+	/**
+	 * Method : processUrlsInAllFiles()
+	 * @param files : list of files to be processed
+	 * @return Map<String, Integer> : returns totalUrlProcessed/failed/passed count
+	 * @throws Exception 
+	 */
 	public Map<String, Integer> processUrlsInAllFiles(List<Path> files) throws Exception {	
 		int cores = Runtime.getRuntime().availableProcessors();
 		ExecutorService executorService = Executors.newFixedThreadPool(cores);

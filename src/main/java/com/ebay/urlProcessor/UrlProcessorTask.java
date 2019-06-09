@@ -15,7 +15,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -35,6 +34,12 @@ public class UrlProcessorTask implements Callable<Map<UrlStatus,Integer>> {
 		return processUrlsInFile();
 	}
 
+	/**
+	 * Method: getUrls
+	 * reads all the urls from file
+	 * @param filePath
+	 * @return list of urls fetched from file
+	 */
 	private List<URI> getUrls(Path filePath) {
 		List<URI> urls = new ArrayList<>();
 		try (BufferedReader br = Files.newBufferedReader(filePath, StandardCharsets.UTF_8)) {
@@ -50,8 +55,12 @@ public class UrlProcessorTask implements Callable<Map<UrlStatus,Integer>> {
 		return urls;
 	}
 
-
-	private Map<UrlStatus,Integer> getCounts(List<HttpResponse<String>> responses) throws InterruptedException, ExecutionException {
+    /**
+     * Counts the number of passed/failed urls
+     * @param responses
+     * @return
+     */
+	private Map<UrlStatus,Integer> getCounts(List<HttpResponse<String>> responses) {
 		Map<UrlStatus,Integer> map = new HashMap<UrlStatus,Integer>();	
 		for (HttpResponse<String> response : responses) {
 			int currCount = 0;
@@ -70,6 +79,11 @@ public class UrlProcessorTask implements Callable<Map<UrlStatus,Integer>> {
 		return map;
 	}
 
+	/**
+	 * Send request to server for each url and collects the response
+	 * @param urls : list of responses
+	 * @return
+	 */
 	private List<HttpResponse<String>> sendRequests(List<URI> urls) {
 		List<HttpResponse<String>> responses = new ArrayList<>();
 		urls.stream().forEach(url-> {
@@ -84,6 +98,10 @@ public class UrlProcessorTask implements Callable<Map<UrlStatus,Integer>> {
 		return responses;
 	}
 
+	/**
+	 * processes urls in a file and collects the response status
+	 * @return
+	 */
 	public Map<UrlStatus, Integer> processUrlsInFile() { 
 		logger.info("Processing file: "+ filePath.getFileName());
 		Map<UrlStatus,Integer> map = null;
@@ -101,6 +119,5 @@ public class UrlProcessorTask implements Callable<Map<UrlStatus,Integer>> {
 		}	
 		return map;
 	}
-
 
 }

@@ -20,7 +20,7 @@ public class Driver {
 		return true;	
 	}
 
-	private static void printResultInfo(Map<String, Integer> map) {
+	private static void printResultInfo (Map<String, Integer> map) {
 		if (map == null || map.size() == 0)
 			return;
 		int totalUrlCount = map.getOrDefault(UrlStatus.TOTAL_URLS.toString(), 0);
@@ -31,12 +31,12 @@ public class Driver {
 		System.out.println("Total number of Urls failed: "+failedUrlsCount);
 	}
 
-	public static void main(String[] args) throws Exception {	
+	public static void main (String[] args) throws Exception {	
 		if (args == null || args.length < 0) {
 			throw new IllegalArgumentException(MESSAGE_INVALID_ARGUMENTS);
 		}
 		Path directoryPath = Paths.get(args[0]);	   		
-		if(!validPath(directoryPath)){
+		if (!validPath(directoryPath)) {
 			throw new IllegalArgumentException(MESSAGE_INVALID_FILE_PATH);			
 		}
 		FileProcessor fileProcessor = new FileProcessor(directoryPath);
