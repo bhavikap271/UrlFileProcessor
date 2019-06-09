@@ -11,11 +11,11 @@ import java.util.logging.Logger;
 public class Driver {
 
 	private final static Logger logger = Logger.getLogger(Driver.class.getName());
-	public static final String MESSAGE_INVALID_FILE_PATH = "Path does not exists";
+	public static final String MESSAGE_INVALID_FILE_PATH = "Directory Path does not exists";
 	public static final String MESSAGE_INVALID_ARGUMENTS = "Invalid arguments, expects atleast one arguments: Path of file.";
 
 	private static boolean validPath (Path path) {
-		if(!Files.exists(path))
+		if (!Files.exists(path))
 			return false;
 		return true;	
 	}
@@ -32,7 +32,7 @@ public class Driver {
 	}
 
 	public static void main (String[] args) throws Exception {	
-		if (args == null || args.length < 0) {
+		if (args == null || args.length <= 0) {
 			throw new IllegalArgumentException(MESSAGE_INVALID_ARGUMENTS);
 		}
 		Path directoryPath = Paths.get(args[0]);	   		
