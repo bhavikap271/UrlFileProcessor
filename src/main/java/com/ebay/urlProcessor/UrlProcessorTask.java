@@ -10,9 +10,7 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -33,91 +31,80 @@ public class UrlProcessorTask implements Callable<Map<UrlStatus,Integer>> {
 	public Map<UrlStatus, Integer> call() throws Exception {	
 		return processUrlsInFile();
 	}
-
-	/**
-	 * Method: getUrls
-	 * reads all the urls from file
-	 * @param filePath
-	 * @return list of urls fetched from file
-	 */
-	private List<URI> getUrls(Path filePath) {
-		List<URI> urls = new ArrayList<>();
+	
+    /**
+     * Reads url from file, sends request to server
+     * and get the total passed/failed count
+     * @param filePath
+     * @return
+     */
+	private Map<UrlStatus,Integer> getResponseStatusCounts(Path filePath) {
+		Map<UrlStatus,Integer> countMap = new HashMap<UrlStatus,Integer>();	
+		int noOfUrls = 0;
 		try (BufferedReader br = Files.newBufferedReader(filePath, StandardCharsets.UTF_8)) {
 			String line = null;
 			while((line = br.readLine()) != null) {
 				URI	uri = URI.create(line);
-				urls.add(uri);
+				noOfUrls++;
+				HttpResponse<String> response = sendRequest(uri);
+				updateCountMap(response, countMap);
 			}
 		} catch (IOException e) {
 			String message = String.format("Error reading urls from file: %s", filePath.getFileName());
 			logger.log(Level.SEVERE, message);	
-		} 
-		return urls;
-	}
-
-    /**
-     * Counts the number of passed/failed urls
-     * @param responses
-     * @return
-     */
-	private Map<UrlStatus,Integer> getCounts(List<HttpResponse<String>> responses) {
-		Map<UrlStatus,Integer> map = new HashMap<UrlStatus,Integer>();	
-		for (HttpResponse<String> response : responses) {
-			int currCount = 0;
-			if (response.statusCode() == 200) {
-				if (map.containsKey(UrlStatus.PASSED)) {
-					currCount = map.get(UrlStatus.PASSED);
-				}
-				map.put(UrlStatus.PASSED, currCount + 1);
-			} else {
-				if (map.containsKey(UrlStatus.FAILED)) {
-					currCount = map.get(UrlStatus.FAILED);
-				}
-				map.put(UrlStatus.FAILED, currCount + 1);
-			}
 		}
-		return map;
+		countMap.put(UrlStatus.TOTAL_URLS, noOfUrls);
+		return countMap;
+	}
+
+	private void updateCountMap(HttpResponse<String> response, Map<UrlStatus,Integer> countMap) {
+		int currCount = 0;
+		if (response.statusCode() == 200) {
+			if (countMap.containsKey(UrlStatus.PASSED)) {
+				currCount = countMap.get(UrlStatus.PASSED);
+			}
+			countMap.put(UrlStatus.PASSED, currCount + 1);
+		} else {
+			if (countMap.containsKey(UrlStatus.FAILED)) {
+				currCount = countMap.get(UrlStatus.FAILED);
+			}
+			countMap.put(UrlStatus.FAILED, currCount + 1);
+		}
 	}
 
 	/**
-	 * Send request to server for each url and collects the response
-	 * @param urls : list of responses
-	 * @return
+	 * Send request to server and returns the response
+	 * @param requesturi
+	 * @return httpresponse
 	 */
-	private List<HttpResponse<String>> sendRequests(List<URI> urls) {
-		List<HttpResponse<String>> responses = new ArrayList<>();
-		urls.stream().forEach(url-> {
-			HttpRequest request = HttpRequest.newBuilder().uri(url).build();
-			try {
-				responses.add(client.send(request, BodyHandlers.ofString()));
-			} catch (Exception e) {
-				String message = String.format("Sending request to url failed: %s. Cause: %s",  url, e.getCause());
-				logger.log(Level.SEVERE, message);	
-			} 
-		});		
-		return responses;
+	private HttpResponse<String> sendRequest(URI requesturi) {
+		HttpRequest request = HttpRequest.newBuilder().uri(requesturi).build();
+		HttpResponse<String> response = null;
+		try {
+			response = client.send(request, BodyHandlers.ofString());
+		} catch (Exception e) {
+			String message = String.format("Sending request to url failed: %s. Cause: %s",  requesturi, e.getCause());
+			logger.log(Level.SEVERE, message);	
+		}
+		return response;
 	}
 
 	/**
-	 * processes urls in a file and collects the response status
+	 * processes urls in a file and collects the count of failed/success urls
 	 * @return
 	 */
 	public Map<UrlStatus, Integer> processUrlsInFile() { 
-		logger.info("Processing file: "+ filePath.getFileName());
+		logger.info("Processing file: "+ "'"+filePath.getFileName()+"'");
 		Map<UrlStatus,Integer> map = null;
 		try{				
-			List<URI> urls = getUrls(filePath);
 			long startTime = System.currentTimeMillis();	
-			List<HttpResponse<String>> responses = sendRequests(urls);
-			map = getCounts(responses);
-			map.put(UrlStatus.TOTAL_URLS, urls.size());
+			map = getResponseStatusCounts(filePath);
 			long endTime = System.currentTimeMillis();
-			logger.info("Processed file: " + filePath.getFileName() + " in "+ (TimeUnit.MILLISECONDS.toMinutes((endTime - startTime))) +" minutes.");
+			logger.info("Processed file: " + "'"+filePath.getFileName() +"'"+ " in "+ (TimeUnit.MILLISECONDS.toMinutes((endTime - startTime))) +" minutes.");
 		} catch (Exception e) {
 			String message = String.format("Processing urls from file failed: %s. Cause: %s", filePath.getFileName());
 			logger.log(Level.SEVERE, message);			
 		}	
 		return map;
 	}
-
 }

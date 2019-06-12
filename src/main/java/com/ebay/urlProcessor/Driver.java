@@ -26,19 +26,17 @@ public class Driver {
 		int totalUrlCount = map.getOrDefault(UrlStatus.TOTAL_URLS.toString(), 0);
 		int passedUrlsCount = map.getOrDefault(UrlStatus.PASSED.toString(), 0);
 		int failedUrlsCount = map.getOrDefault(UrlStatus.FAILED.toString(), 0);	
-		System.out.println("Total number of Urls processed: " +totalUrlCount);
-		System.out.println("Total number of Urls passed: " +passedUrlsCount);
-		System.out.println("Total number of Urls failed: "+failedUrlsCount);
+		logger.info("Total number of Urls processed: " +totalUrlCount);
+		logger.info("Total number of Urls passed: " +passedUrlsCount);
+		logger.info("Total number of Urls failed: "+failedUrlsCount);
 	}
 
 	public static void main (String[] args) throws Exception {	
-		if (args == null || args.length <= 0) {
+		if (args == null || args.length <= 0) 
 			throw new IllegalArgumentException(MESSAGE_INVALID_ARGUMENTS);
-		}
 		Path directoryPath = Paths.get(args[0]);	   		
-		if (!validPath(directoryPath)) {
+		if (!validPath(directoryPath))
 			throw new IllegalArgumentException(MESSAGE_INVALID_FILE_PATH);			
-		}
 		FileProcessor fileProcessor = new FileProcessor(directoryPath);
 	    logger.log(Level.FINE, "Processing files from path:", directoryPath);
 		Map<String, Integer> resultMap = null;
@@ -46,7 +44,7 @@ public class Driver {
 			long startTime = System.currentTimeMillis();	
 			resultMap = fileProcessor.processFiles();
 			long endTime = System.currentTimeMillis();
-			logger.info("Time taken to complete all files: "+ TimeUnit.MILLISECONDS.toMinutes((endTime - startTime)));
+			logger.info("Time taken to complete all files: "+ TimeUnit.MILLISECONDS.toSeconds((endTime - startTime)) + " seconds.");
 			printResultInfo(resultMap);
 		} catch (Exception e) {
 			logger.log(Level.SEVERE,"Error in processing files. Cause:", e.getCause());
